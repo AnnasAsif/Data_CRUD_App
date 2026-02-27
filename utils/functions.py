@@ -48,3 +48,44 @@ async def save_single_file_by_folder(
             detail=f"Failed to save file: {e}"
         )
 
+
+def rename_folder(old_path, new_path):
+    """
+    Rename a folder from old_path to new_path.
+    
+    Args:
+        old_path: Current folder path
+        new_path: New folder path
+        
+    Returns:
+        dict: Success message
+        
+    Raises:
+        HTTPException: If folder doesn't exist or destination already exists
+    """
+    try:
+        if not os.path.exists(old_path):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Folder not found: {old_path}"
+            )
+        
+        if os.path.exists(new_path):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Destination folder already exists: {new_path}"
+            )
+        
+        os.rename(old_path, new_path)
+        
+        return {
+            "message": f"Folder renamed from '{old_path}' to '{new_path}'"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to rename folder: {e}"
+        )
