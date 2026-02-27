@@ -8,7 +8,7 @@ from database.database_config import get_assets_db
 from database.assets_model import Category, Asset
 from database.project_model import Project
 
-from utils.functions import create_target_Assets_folders, save_files_by_folder,save_single_file_by_folder, create_req_folder
+from utils.functions import create_target_Assets_folders, save_files_by_folder,save_single_file_by_folder, create_req_folder, rename_folder
 
 from environment import config
 
@@ -69,7 +69,7 @@ async def create_project(
         print(e)
         raise HTTPException (
             status_code=500,
-            detail=f"Failed to add categories: {e}"
+            detail=f"Failed to add project: {e}"
         )
 
 #=======================================================================================
@@ -102,6 +102,70 @@ async def get_projects(
             detail=f"Failed to add categories: {e}"
         )
 
+#=======================================================================================
+#Update a project
+async def update_project(
+    projectName,
+    projectImage,
+    newprojectName
+):
+    try:
+        db = get_assets_db()
+        collection = db[config.PROJECTS_COLLECTION]
+        if newprojectName:
+            name = newprojectName
+        else:
+            name = projectName
+        
+        foldername = projectName.replace(" ","_").lower()
+        folderfullpath = f"{config.STATIC_DIR}/{foldername}"
+
+        newfoldername = newprojectName.replace(" ","_").lower()
+        if newfoldername:
+            newfolderfullpath = f"{config.STATIC_DIR}/{newfoldername}"
+
+        image_url = None
+        thumbnail_url = None
+
+        if projectImage:
+            print("Image Loaded")
+            filename = projectImage.filename
+            imagepath = f"{folderfullpath}/{filename}"
+            thumbnailpath = f"{folderfullpath}/thumb_{filename}"
+
+            #Save image
+            await save_single_file_by_folder(folderfullpath, projectImage)
+            #Save thumbnail
+            create_thumbnail(imagepath, thumbnailpath)
+
+            image_url = f"{config.FILE_URL_PREFIX}/{imagepath}"
+            image_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
+
+        if newfoldername:
+            rename_folder(folderfullpath, newfolderfullpath)
+            
+        #model for updation
+        project_model = Project(
+            name= name,
+            image_url= image_url,
+            thumbnail_url= thumbnail_url
+        )
+
+        filter_criteria = {"name": projectName}
+        update_data = {"$set": project_model.model_dump(exclude_unset=True)}
+        await collection.update_one(filter_criteria, update_data)
+
+        return {
+            "Message": f"{name} project updated"
+        }
+
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code = 500,
+            detail = f"Failed to update project : {e}"
+        )
 #=======================================================================================
 #=======================================================================================
 

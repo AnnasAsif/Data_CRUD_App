@@ -30,7 +30,23 @@ async def create_project(
     
     result = await controller.create_project(projectName, projectImage)
     return result
+
+@router.put("/edit_project", response_model=dict)
+async def create_project(
+    request: Request,
+    projectName: str = Form(...),
+    newprojectName: str = Form(None),
+    projectImage: UploadFile = File(None)
+):
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter project name"}
+        )
     
+    result = await controller.update_project(projectName, projectImage, newprojectName)
+    return result
+
 @router.get("/get_projects", response_model=dict)
 async def get_projects():
 
