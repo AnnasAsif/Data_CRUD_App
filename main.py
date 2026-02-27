@@ -11,19 +11,13 @@ from inits.server_init import app
 
 #Setup Authorization Middleware
 # Define paths that require authorization (create/edit operations)
-PROTECTED_PATHS = [
-    "/api/crud/create_new_project",
-    "/api/crud/edit_project",
-    "/api/crud/add_categories",
-    "/api/crud/add_assets",
-    "/api/crud/updateAsset"
-]
+# from environment.protected_paths import PROTECTED_PATHS
 
-app.add_middleware(
-    AuthorizationMiddleware,
-    protected_paths=PROTECTED_PATHS,
-    api_key=os.getenv("API_KEY", "your-secret-api-key")
-)
+# app.add_middleware(
+#     AuthorizationMiddleware,
+#     protected_paths=PROTECTED_PATHS,
+#     api_key=os.getenv("API_KEY", "your-secret-api-key")
+# )
 
 #Setup Analytics Router
 app.add_middleware(
