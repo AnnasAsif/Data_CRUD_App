@@ -13,7 +13,9 @@ class AuthorizationMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.protected_paths = protected_paths or []
         # Get API key from environment or use provided one
-        self.api_key = api_key or os.getenv("API_KEY", "your-secret-api-key")
+        self.api_key = api_key or os.getenv("API_KEY")
+        if not self.api_key:
+            raise ValueError("API_KEY must be set in environment variables or passed as parameter")
     
     async def dispatch(self, request: Request, call_next):
         # Check if the current path requires authorization
