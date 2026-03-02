@@ -7,12 +7,11 @@ from typing import Dict, Any
 # Analytics Models
 class Category(BaseModel):
     name: str = Field(..., description="Category name")
-    projectName: str = Field(..., description="Project name")
     is_enabled: bool = Field(default=False, description="Category is enabled")
     is_premium: bool = Field(default=False, description="Category is premium")
     sequence: int = Field(default=0, description="Category sequence")
-    image_url: str = Field(default=None, description="Category image URL")
-    thumbnail_url: str = Field(default=None, description="Category thumbnail URL")
+    image_url: Optional[str] = Field(default=None, description="Category image URL")
+    thumbnail_url: Optional[str] = Field(default=None, description="Category thumbnail URL")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="Last update timestamp")
 
@@ -22,7 +21,6 @@ class Category(BaseModel):
 
 class Asset(BaseModel):
     category_id: str = Field(..., description="Category ID")
-    projectName: str = Field(..., description="Project Name")
     name: str = Field(..., description="Asset name")
     description: Optional[str] = Field(None, description="Asset description")
     image_url: Optional[str] = Field(default=None, description="Asset image URL")

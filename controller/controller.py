@@ -1,5 +1,6 @@
 import os
 from bson import ObjectId
+from datetime import datetime
 
 from utils.preprocess_image import create_thumbnail
 
@@ -72,7 +73,7 @@ async def create_project(
             detail=f"Failed to add project: {e}"
         )
 
-#=======================================================================================
+#=================================================
 #Get list of projects
 async def get_projects(
 ):
@@ -102,7 +103,7 @@ async def get_projects(
             detail=f"Failed to add categories: {e}"
         )
 
-#=======================================================================================
+#=================================================
 #Update a project
 async def update_project(
     projectName,
@@ -148,7 +149,8 @@ async def update_project(
         project_model = Project(
             name= name,
             image_url= image_url,
-            thumbnail_url= thumbnail_url
+            thumbnail_url= thumbnail_url,
+            updated_at = datetime.utcnow
         )
 
         filter_criteria = {"name": projectName}
@@ -167,7 +169,7 @@ async def update_project(
             detail = f"Failed to update project : {e}"
         )
 
-#=======================================================================================
+#=================================================
 #Delete a complete project alongwith Categories and Assets
 async def remove_project(
     projectName
@@ -246,7 +248,6 @@ async def add_categories(
                 
                 category_model = Category(
                     name= category,
-                    projectName = projectName,
                     image_url= image_url,
                     thumbnail_url= thumbnail_url
                 )
@@ -259,7 +260,7 @@ async def add_categories(
             # Categories Recieved
             print("Categories Recieved")
             for category in categories:
-                category_model = Category(name=category, projectName=projectName)
+                category_model = Category(name=category)
 
                 #create folder for assets
                 create_req_folder(f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
@@ -278,7 +279,87 @@ async def add_categories(
             detail=f"Failed to add categories: {e}"
         )
 
-#=======================================================================================
+#=================================================
+
+async def update_category(
+    projectName,
+    categoryId,
+    categoryName,
+    image
+):
+    try:
+        project_foldername = projectName.replace(" ","_").lower()
+
+        db = get_assets_db()
+        collection = db[f"{config.CATEGORIES_COLLECTION}_{project_foldername}"]
+
+        old_cat = await collection.find_one({"_id": ObjectId(categoryId)})
+        if old_cat:
+            old_categoryName = old_cat.get("name").replace(" ","_").lower()
+        else:
+            raise ValueError("No such category found")
+            # Handle the "Not Found" case here
+
+        category = categoryName
+        category_folder = f"{config.STATIC_DIR}/{project_foldername}/Original/Category"
+        cat_thumbnail_folder = f"{config.STATIC_DIR}/{project_foldername}/Thumbnail/Category"
+
+        # New Folder paths
+        new_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
+        new_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
+        # Old Folder Paths
+        old_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{old_categoryName}"
+        old_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{old_categoryName}"
+
+        # Renaming folders
+        print("Renaming")
+        rename_folder(old_AssetsFolder, new_AssetsFolder)
+        print("Renamed-1")
+        rename_folder(old_Assets_thumbnails, new_Assets_thumbnails)
+        print("Renamed-2")
+        
+        obj = {}
+        image_url= None
+        thumbnail_url= None
+        if image:
+            print('image found')
+            filename = image.filename
+            category = filename.split(".")[0]
+            filepath = f"{category_folder}/{filename}"
+            thumbnailpath = f"{cat_thumbnail_folder}/{filename}"
+
+            await save_single_file_by_folder(category_folder, image)
+
+            #create thumbnail and make url
+            create_thumbnail(filepath, thumbnailpath)
+            image_url = f"{config.IMAGE_URL_PREFIX}/{filepath}"
+            thumbnail_url = f"{config.IMAGE_URL_PREFIX}/{thumbnailpath}"
+
+        category_model = Category(
+            name= category,
+            image_url= image_url,
+            thumbnail_url= thumbnail_url,
+            updated_at = datetime.utcnow()
+        )
+
+        filter_criteria = {"_id": ObjectId(categoryId)}
+        update_data = {"$set": category_model.model_dump(exclude_unset=True)}
+
+        await collection.update_one(filter_criteria, update_data)
+
+        return {
+            "message": f"'{old_cat.get("name")}' updated to '{category}'"
+        }
+
+    except Exception as e:
+        print(e)
+        raise HTTPException (
+            status_code=500,
+            detail=f"Failed to update category: {e}"
+        )
+
+
+#=================================================
 
 async def get_all_categories(
     projectName

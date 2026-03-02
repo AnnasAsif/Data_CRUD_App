@@ -32,7 +32,7 @@ async def create_project(
     return result
 
 @router.put("/edit_project", response_model=dict)
-async def create_project(
+async def edit_project(
     request: Request,
     projectName: str = Form(...),
     newprojectName: str = Form(None),
@@ -48,7 +48,8 @@ async def create_project(
     return result
 
 @router.get("/get_projects", response_model=dict)
-async def get_projects():
+async def get_projects(
+):
 
     result = await controller.get_projects()
     return result
@@ -77,6 +78,12 @@ async def add_categories(
     categories: list[str] = Form(None),
     images: list[UploadFile] = File(None),
 ):
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter project name"}
+        )
+
     # Set the state so the middleware can access it later
     request.state.project_name = projectName
     
@@ -87,11 +94,6 @@ async def add_categories(
     # We check for: list is not None, list is not empty, and filename is not empty
     has_images = images and len(images) > 0 and images[0].filename != ""
 
-    if not projectName:
-        return JSONResponse(
-            status_code=400, # 400 is better for "User Error/Bad Request"
-            content={"status": "error", "message": "Enter project name"}
-        )
     if not has_categories and not has_images:
         return JSONResponse(
             status_code=400, # 400 is better for "User Error/Bad Request"
@@ -117,6 +119,28 @@ async def get_categories(
 
 
     result = await controller.get_all_categories(projectName)
+    return result
+
+@router.put("/edit_category", response_model=dict)
+async def edit_category(
+    request: Request,
+    projectName: str = Form(...),
+    categoryId: str = Form(None),
+    categoryName: str = Form(None),
+    categoryImage: UploadFile = File(None)
+):
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter project name"}
+        )
+    if not categoryId:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "CategoryId missing"}
+        )
+    
+    result = await controller.update_category(projectName, categoryId, categoryName, categoryImage)
     return result
 
 #=======================================================================================
