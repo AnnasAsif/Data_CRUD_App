@@ -4,6 +4,7 @@ PROTECTED_PATHS = [
     "/api/crud/delete_project",
 
     "/api/crud/add_categories",
+    "/api/crud/edit_category",
 
     "/api/crud/add_assets",
     "/api/crud/updateAsset",

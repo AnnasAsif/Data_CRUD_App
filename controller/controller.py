@@ -1,4 +1,5 @@
 import os
+import shutil
 from bson import ObjectId
 from datetime import datetime
 
@@ -184,7 +185,7 @@ async def remove_project(
         # Delete project folder and all its contents
         project_folder_path = f"{config.STATIC_DIR}/{project_name}"
         if os.path.exists(project_folder_path):
-            import shutil
+        
             shutil.rmtree(project_folder_path)
         
         # Delete project document from projects collection
@@ -210,7 +211,7 @@ async def remove_project(
 
 #=======================================================================================
 #=======================================================================================
-
+#Add a new category
 async def add_categories(
     categories, 
     projectName,
@@ -280,12 +281,14 @@ async def add_categories(
         )
 
 #=================================================
-
+# Update an existing Category
 async def update_category(
     projectName,
     categoryId,
     categoryName,
-    image
+    image,
+    isEnable,
+    isPremium
 ):
     try:
         project_foldername = projectName.replace(" ","_").lower()
@@ -293,38 +296,43 @@ async def update_category(
         db = get_assets_db()
         collection = db[f"{config.CATEGORIES_COLLECTION}_{project_foldername}"]
 
+
         old_cat = await collection.find_one({"_id": ObjectId(categoryId)})
         if old_cat:
             old_categoryName = old_cat.get("name").replace(" ","_").lower()
         else:
             raise ValueError("No such category found")
             # Handle the "Not Found" case here
+        Category_Name = old_categoryName
 
-        category = categoryName
+        # Category and Thumbnail Static folders if required
+        category = old_categoryName
         category_folder = f"{config.STATIC_DIR}/{project_foldername}/Original/Category"
         cat_thumbnail_folder = f"{config.STATIC_DIR}/{project_foldername}/Thumbnail/Category"
 
-        # New Folder paths
-        new_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
-        new_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
-        # Old Folder Paths
-        old_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{old_categoryName}"
-        old_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{old_categoryName}"
+        # If new category name is provided
+        if categoryName is not None:
+            category = categoryName
+            Category_Name = categoryName
 
-        # Renaming folders
-        print("Renaming")
-        rename_folder(old_AssetsFolder, new_AssetsFolder)
-        print("Renamed-1")
-        rename_folder(old_Assets_thumbnails, new_Assets_thumbnails)
-        print("Renamed-2")
+            # New Folder paths
+            new_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
+            new_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
+            # Old Folder Paths
+            old_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{old_categoryName}"
+            old_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{old_categoryName}"
+
+            # Renaming folders
+            rename_folder(old_AssetsFolder, new_AssetsFolder)
+            rename_folder(old_Assets_thumbnails, new_Assets_thumbnails)
         
-        obj = {}
         image_url= None
         thumbnail_url= None
         if image:
             print('image found')
             filename = image.filename
             category = filename.split(".")[0]
+            Category_Name = category
             filepath = f"{category_folder}/{filename}"
             thumbnailpath = f"{cat_thumbnail_folder}/{filename}"
 
@@ -336,11 +344,16 @@ async def update_category(
             thumbnail_url = f"{config.IMAGE_URL_PREFIX}/{thumbnailpath}"
 
         category_model = Category(
-            name= category,
+            name= Category_Name,
             image_url= image_url,
             thumbnail_url= thumbnail_url,
             updated_at = datetime.utcnow()
         )
+
+        if isEnable is not None:
+            category_model.is_enabled = isEnable
+        if isPremium is not None:
+            category_model.is_premium = isPremium
 
         filter_criteria = {"_id": ObjectId(categoryId)}
         update_data = {"$set": category_model.model_dump(exclude_unset=True)}
@@ -348,7 +361,7 @@ async def update_category(
         await collection.update_one(filter_criteria, update_data)
 
         return {
-            "message": f"'{old_cat.get("name")}' updated to '{category}'"
+            "message": f"Category '{category}' Updated"
         }
 
     except Exception as e:
@@ -358,24 +371,31 @@ async def update_category(
             detail=f"Failed to update category: {e}"
         )
 
-
 #=================================================
-
+#Read all the categories
 async def get_all_categories(
-    projectName
+    projectName,
+    isAdmin
 ):
     try:
         project_foldername = projectName.replace(" ","_").lower()
         db = get_assets_db()
         collection = db[f"{config.CATEGORIES_COLLECTION}_{project_foldername}"]
         
-        condition = {"projectName": projectName}
+        condition = {}
+        projection = {}
+        
+        if not isAdmin or isAdmin == "false":
+            condition = {
+                "is_enabled": True
+                }
+            projection = {
+                "sequence": 0,
+                "is_enabled": 0,
+                "created_at": 0,
+                "updated_at": 0
+            }
         print(condition)
-        projection = {
-            "_id":1,
-            "name": 1,
-            "is_premium": 1
-        }
         # 1. Fetch the data
         categories = await collection.find(condition,projection).to_list(length=None)
         
@@ -384,13 +404,62 @@ async def get_all_categories(
             category["_id"] = str(category["_id"])
         return {
             "categories": categories,
-            "message": f"{len(categories)} categories fetched successfully"
+            "message": f"{len(categories)} categories found"
         }
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"Failed to fetch categories: {e}"
         )
+
+#=================================================
+#Delete a catgory and it's assets
+#Delete a complete project alongwith Categories and Assets
+async def remove_category(
+    projectName, categoryId
+):
+    project_name = projectName.replace(" ", "_").lower()
+    db = get_assets_db()
+    # reading collections for deletion
+    categories_collection = db[f"{config.CATEGORIES_COLLECTION}_{project_name}"]
+    assets_collection = db[f"{config.ASSETS_COLLECTION}_{project_name}"]
+
+    #Find category instance for name reading
+    match_category = await categories.find_one({"_id": ObjectId(categoryId)})
+    category_Name = match_category.get("name")
+    category_Folder = category_Name.replace(" ","_").lower()
+
+    try:
+        # Delete category folder and all its contents from Original/Asset and Thumbnail/Asset
+        original_category_path = f"{config.STATIC_DIR}/{project_name}/Original/Asset/{category_Folder}"
+        thumbnail_category_path = f"{config.STATIC_DIR}/{project_name}/Thumbnail/Asset/{category_Folder}"
+        
+
+        if os.path.exists(original_category_path):
+            shutil.rmtree(original_category_path)
+        if os.path.exists(thumbnail_category_path):
+            shutil.rmtree(thumbnail_category_path)
+        
+        # Delete category document from categories collection
+        await categories_collection.delete_one({"_id": ObjectId(categoryId)})
+        
+        # Delete all assets for this category
+        await assets_collection.delete_many({"category_id": categoryId})
+        
+        
+        
+        return {
+            "Message": f"{category_Name} - category and it's assets deleted successfully"
+        }
+    
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete project: {e}"
+        )
+ 
+
 
 #=======================================================================================
 #=======================================================================================

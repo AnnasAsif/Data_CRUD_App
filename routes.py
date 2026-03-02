@@ -108,6 +108,7 @@ async def get_categories(
     request: Request,
 ):
     projectName = request.query_params.get("projectName")
+    isAdmin = request.query_params.get("isAdmin")
     if not projectName:
         return JSONResponse(
             status_code=400, # 400 is better for "User Error/Bad Request"
@@ -118,7 +119,7 @@ async def get_categories(
     request.state.project_name = projectName
 
 
-    result = await controller.get_all_categories(projectName)
+    result = await controller.get_all_categories(projectName, isAdmin)
     return result
 
 @router.put("/edit_category", response_model=dict)
@@ -127,7 +128,9 @@ async def edit_category(
     projectName: str = Form(...),
     categoryId: str = Form(None),
     categoryName: str = Form(None),
-    categoryImage: UploadFile = File(None)
+    categoryImage: UploadFile = File(None),
+    isEnable: bool = Form(None),
+    isPremium: bool= Form(None)
 ):
     if not projectName:
         return JSONResponse(
@@ -140,7 +143,7 @@ async def edit_category(
             content={"status": "error", "message": "CategoryId missing"}
         )
     
-    result = await controller.update_category(projectName, categoryId, categoryName, categoryImage)
+    result = await controller.update_category(projectName, categoryId, categoryName, categoryImage, isEnable, isPremium)
     return result
 
 #=======================================================================================
