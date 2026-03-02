@@ -11,13 +11,13 @@ from inits.server_init import app
 
 #Setup Authorization Middleware
 # Define paths that require authorization (create/edit operations)
-# from environment.protected_paths import PROTECTED_PATHS
+from environment.protected_paths import PROTECTED_PATHS
 
-# app.add_middleware(
-#     AuthorizationMiddleware,
-#     protected_paths=PROTECTED_PATHS,
-#     api_key=os.getenv("API_KEY", "your-secret-api-key")
-# )
+app.add_middleware(
+    AuthorizationMiddleware,
+    protected_paths=PROTECTED_PATHS,
+    api_key=os.getenv("API_KEY", "your-secret-api-key")
+)
 
 #Setup Analytics Router
 app.add_middleware(

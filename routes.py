@@ -53,6 +53,20 @@ async def get_projects():
     result = await controller.get_projects()
     return result
 
+@router.delete("/delete_project", response_model=dict)
+async def delete_project(
+    request: Request,
+):
+    projectName = request.query_params.get("projectName")
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter project name"}
+        )
+
+    result = await controller.remove_project(projectName)
+    return result
+
 #=======================================================================================
 #=======================================================================================
 

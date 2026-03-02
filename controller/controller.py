@@ -166,6 +166,46 @@ async def update_project(
             status_code = 500,
             detail = f"Failed to update project : {e}"
         )
+
+#=======================================================================================
+#Delete a complete project alongwith Categories and Assets
+async def remove_project(
+    projectName
+):
+    project_name = projectName.replace(" ", "_").lower()
+    db = get_assets_db()
+    collection = db[config.PROJECTS_COLLECTION]
+    categories_collection = db[f"{config.CATEGORIES_COLLECTION}_{project_name}"]
+    assets_collection = db[f"{config.ASSETS_COLLECTION}_{project_name}"]
+
+    try:
+        # Delete project folder and all its contents
+        project_folder_path = f"{config.STATIC_DIR}/{project_name}"
+        if os.path.exists(project_folder_path):
+            import shutil
+            shutil.rmtree(project_folder_path)
+        
+        # Delete project document from projects collection
+        await collection.delete_one({"name": projectName})
+        
+        # Delete all categories for this project
+        await categories_collection.drop()
+        
+        # Delete all assets for this project
+        await assets_collection.drop()
+        
+        return {
+            "Message": f"{projectName} project and all associated data deleted successfully"
+        }
+    
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete project: {e}"
+        )
+    
+
 #=======================================================================================
 #=======================================================================================
 
