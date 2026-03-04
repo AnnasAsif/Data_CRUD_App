@@ -146,6 +146,26 @@ async def edit_category(
     result = await controller.update_category(projectName, categoryId, categoryName, categoryImage, isEnable, isPremium)
     return result
 
+@router.delete("/delete_category", response_model=dict)
+async def delete_category(
+    request: Request,
+):
+    projectName = request.query_params.get("projectName")
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter project name"}
+        )
+    categoryId = request.query_params.get("categoryId")
+    if not categoryId:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter Category ID"}
+        )
+
+    result = await controller.remove_category(projectName, categoryId)
+    return result
+
 #=======================================================================================
 #=======================================================================================
 
@@ -186,6 +206,47 @@ async def add_assets(
 
     return result
 
+@router.post("/create_asset", response_model=dict)
+async def create_asset(
+    request: Request,
+    projectName: str = Form(...),
+    categoryId: str = Form(...),
+    categoryName: str = Form(...),
+    name: str = Form(...),
+    image: UploadFile = File(None),
+    thumbnail: UploadFile = File(None),
+    isEnable: bool = Form(None),
+    isPremium: bool = Form(None),
+    sequence: int = Form(None)
+):
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter ProjectName"}
+        )
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+    
+    if not categoryId or not categoryName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Category Params missing"}
+        )
+    result = await controller.add_new_asset(
+        projectName,
+        categoryId, 
+        categoryName, 
+        name, 
+        image,
+        thumbnail,
+        isPremium,
+        isEnable,
+        sequence
+    )
+
+    return result
+
 @router.get("/get_assets", response_model=dict)
 async def get_assets(
     request: Request
@@ -199,10 +260,11 @@ async def get_assets(
 
     # Set the state so the middleware can access it later
     request.state.project_name = projectName
-    category_id = request.query_params.get("category_id")
+    categoryId = request.query_params.get("categoryId")
+    isAdmin = request.query_params.get("isAdmin")
     
     # Get assets from database
-    result = await controller.get_assets(category_id, projectName)
+    result = await controller.get_assets(categoryId, projectName, isAdmin)
     return result
 
 #=======================================================================================

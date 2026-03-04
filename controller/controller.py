@@ -27,9 +27,17 @@ async def create_project(
         db = get_assets_db()
         collection = db[config.PROJECTS_COLLECTION]
 
-        image_url= None
-        thumbnail_url= None
+        image_url= config.DEFAULT_IMAGE
+        thumbnail_url= config.DEFAULT_THUMBNAIL
         foldername= projectName.replace(" ","_").lower()
+
+        # Finding if alread exists
+        condition = {"name": projectName}
+        projection = {}
+        projects = await collection.find(condition, projection).to_list(length=None)
+        if len(projects) > 0:
+
+            raise ValueError("This Project Already Exists")
 
         project_path = f"{config.STATIC_DIR}/{foldername}"
         create_req_folder(project_path)
@@ -83,10 +91,7 @@ async def get_projects(
         collection = db[config.PROJECTS_COLLECTION]
 
         condition = {}
-        projection = {
-            "created_at":0,
-            "updated_at":0
-        }
+        projection = {}
         projects = await collection.find(condition, projection).to_list(length=None)
 
         # 2. Convert ObjectId to string for every document
@@ -125,9 +130,9 @@ async def update_project(
         newfoldername = newprojectName.replace(" ","_").lower()
         if newfoldername:
             newfolderfullpath = f"{config.STATIC_DIR}/{newfoldername}"
-
-        image_url = None
-        thumbnail_url = None
+        
+        image_url= None
+        thumbnail_url= None
 
         if projectImage:
             print("Image Loaded")
@@ -149,10 +154,13 @@ async def update_project(
         #model for updation
         project_model = Project(
             name= name,
-            image_url= image_url,
-            thumbnail_url= thumbnail_url,
-            updated_at = datetime.utcnow
+            updated_at = datetime.utcnow()
         )
+
+        if image_url is not None:
+            project_model.image_url = image_url
+        if thumbnail_url is not None:
+            project_model.thumbnail_url = thumbnail_url
 
         filter_criteria = {"name": projectName}
         update_data = {"$set": project_model.model_dump(exclude_unset=True)}
@@ -231,9 +239,17 @@ async def add_categories(
             print("Images Recieved")
             await save_files_by_folder(category_folder, images)
 
+            created_count = 0
             for image in images:
                 filename = image.filename
                 category = filename.split(".")[0]
+                
+                # Check if category already exists
+                existing = await collection.find_one({"name": category})
+                if existing:
+                    print(f"Category '{category}' already exists, skipping")
+                    continue
+                
                 filepath = f"{category_folder}/{filename}"
                 thumbnailpath = f"{cat_thumbnail_folder}/{filename}"
 
@@ -242,9 +258,9 @@ async def add_categories(
                 image_url = f"{config.IMAGE_URL_PREFIX}/{filepath}"
                 thumbnail_url = f"{config.IMAGE_URL_PREFIX}/{thumbnailpath}"
 
-                #create folder for assets
+                #create folder by category name for assets
                 create_req_folder(f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
-                #create folder for assets thumbnails
+                #create folder by category name for assets thumbnails
                 create_req_folder(f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
                 
                 category_model = Category(
@@ -254,14 +270,26 @@ async def add_categories(
                 )
 
                 await collection.insert_one(category_model.model_dump())
+                created_count += 1
             return {
-                "message": f"{len(images)} Categories Created using images"
+                "message": f"{created_count} Categories Created using images"
             }
         else:
             # Categories Recieved
             print("Categories Recieved")
+            created_count = 0
             for category in categories:
-                category_model = Category(name=category)
+                # Check if category already exists
+                existing = await collection.find_one({"name": category})
+                if existing:
+                    print(f"Category '{category}' already exists, skipping")
+                    continue
+                
+                category_model = Category(
+                    name=category,
+                    image_url= config.DEFAULT_IMAGE,
+                    thumbnail_url= config.DEFAULT_THUMBNAIL
+                )
 
                 #create folder for assets
                 create_req_folder(f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
@@ -269,8 +297,9 @@ async def add_categories(
                 create_req_folder(f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
 
                 await collection.insert_one(category_model.model_dump())
+                created_count += 1
             return {
-                "message": f"{len(categories)} Categories Created"
+                "message": f"{created_count} Categories Created"
             }
 
     except Exception as e:
@@ -345,10 +374,13 @@ async def update_category(
 
         category_model = Category(
             name= Category_Name,
-            image_url= image_url,
-            thumbnail_url= thumbnail_url,
             updated_at = datetime.utcnow()
         )
+
+        if image_url is not None:
+            category_model.image_url = image_url
+        if thumbnail_url is not None:
+            category_model.thumbnail_url = thumbnail_url
 
         if isEnable is not None:
             category_model.is_enabled = isEnable
@@ -416,20 +448,24 @@ async def get_all_categories(
 #Delete a catgory and it's assets
 #Delete a complete project alongwith Categories and Assets
 async def remove_category(
-    projectName, categoryId
+    projectName, 
+    categoryId
 ):
-    project_name = projectName.replace(" ", "_").lower()
-    db = get_assets_db()
-    # reading collections for deletion
-    categories_collection = db[f"{config.CATEGORIES_COLLECTION}_{project_name}"]
-    assets_collection = db[f"{config.ASSETS_COLLECTION}_{project_name}"]
-
-    #Find category instance for name reading
-    match_category = await categories.find_one({"_id": ObjectId(categoryId)})
-    category_Name = match_category.get("name")
-    category_Folder = category_Name.replace(" ","_").lower()
-
     try:
+        project_name = projectName.replace(" ", "_").lower()
+        db = get_assets_db()
+        # reading collections for deletion
+        categories_collection = db[f"{config.CATEGORIES_COLLECTION}_{project_name}"]
+        assets_collection = db[f"{config.ASSETS_COLLECTION}_{project_name}"]
+
+        #Find category instance for name reading
+        match_category = await categories_collection.find_one({"_id": ObjectId(categoryId)})
+        if match_category is None:
+            raise ValueError("Category Doesn't Exist")
+
+        category_Name = match_category.get("name")
+        category_Folder = category_Name.replace(" ","_").lower()
+
         # Delete category folder and all its contents from Original/Asset and Thumbnail/Asset
         original_category_path = f"{config.STATIC_DIR}/{project_name}/Original/Asset/{category_Folder}"
         thumbnail_category_path = f"{config.STATIC_DIR}/{project_name}/Thumbnail/Asset/{category_Folder}"
@@ -493,8 +529,8 @@ async def add_assets(
         #======================================================================        
 
         #url variables
-        image_url = None
-        thumbnail_url = None
+        image_url= config.DEFAULT_IMAGE
+        thumbnail_url= config.DEFAULT_THUMBNAIL
         file_url = f"{config.FILE_URL_PREFIX}/{complete_folderpath}"
         #======================================================================        
 
@@ -530,42 +566,6 @@ async def add_assets(
             detail= f"Failed to save asset: {e}"
         )
 
-
-async def get_assets(
-    category_id,
-    projectName
-):
-    try:
-        db = get_assets_db()
-        project_foldername = projectName.replace(" ","_").lower()
-        collection = db[f"{config.ASSETS_COLLECTION}_{project_foldername}"]
-
-        condition = {"projectName": projectName}
-        projection = {
-            "_id":1,
-            "name": 1,
-            "is_premium": 1,
-            "moreFields": 1
-        }
-        if category_id:
-            condition["category_id"] = category_id
-
-        print(condition)
-
-        assets = await collection.find(condition, projection).to_list(length=None)
-
-        for asset in assets:
-            asset["_id"] = str(asset["_id"])
-        
-        return {
-            "assets": assets,
-            "message": f"{len(assets)} assets retrieved successfully"
-        }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to retrieve assets: {e}"
-        )
 
 async def updateAsset(frame_id, requiredFunction):
     try:
@@ -607,4 +607,130 @@ async def updateAsset(frame_id, requiredFunction):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update asset view: {e}"
+        )
+
+
+# Add a new asset
+async def add_new_asset(
+    projectName,
+    categoryId,
+    categoryName,
+    name,
+    image,
+    thumbnail,
+    isPremium,
+    isEnable,
+    sequence
+):
+    try:
+        # Names modified for folder reading
+        projectName_modified = projectName.replace(" ","_").lower()
+        categoryName_modified = categoryName.replace(" ","_").lower()
+        name_modified = name.replace(" ","_").lower()
+
+        # setting up collection
+        db = get_assets_db()
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+        # Check if asset already existing
+        condition = {"category_id": categoryId, "name": name}
+        existing = await collection.find_one(condition)
+        if existing:
+            raise ValueError("Asset already exists")
+
+        #folder to store image
+        image_folderpath = f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{name_modified}"
+        os.makedirs(image_folderpath, exist_ok=True)
+        #folder to store thumbnail
+        thumbnail_folderpath = f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}"
+        os.makedirs(thumbnail_folderpath, exist_ok=True)
+
+        image_url = config.DEFAULT_IMAGE
+        thumbnail_url = None
+
+        # logic for creating thumbnail
+        if thumbnail:
+
+            # write thumbnail logic here
+            save_single_file_by_folder(thumbnail_folderpath, thumbnail)
+
+            thumbnail_url = f"{config.IMAGE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{thumbnail.filename}"
+
+
+        if image:
+
+            # write image logic here
+            filename= image.filename
+
+            save_single_file_by_folder(image_folderpath, image)
+
+            image_url = f"{config.IMAGE_URL_PREFIX}/static/{projectName_modified}/Original/Asset/{categoryName_modified}/{name_modified}/{filename}"
+            
+            # create a thumbnail
+            if thumbnail_url is None:
+    
+                create_thumbnail(f"{image_folderpath}/{filename}", f"{thumbnail_folderpath}/{filename}")
+                thumbnail_url = f"{config.IMAGE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{filename}"
+
+
+        if thumbnail_url is None:
+            thumbnail_url = config.DEFAULT_THUMBNAIL
+        
+        asset_model = Asset(
+            category_id= categoryId,
+            name= name,
+            image_url= image_url,
+            thumbnail_url= thumbnail_url,
+            moreFields= {}
+        )
+        if isEnable:
+            asset_model.is_enabled = isEnable
+        if isPremium:
+            asset_model.is_premium = isPremium
+        if sequence:
+            asset_model.sequence = sequence
+
+        await collection.insert_one(asset_model.model_dump())
+        return {
+            "message": f"{name} asset added in category {categoryName}"
+        }
+
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail= f"Error while Creating the Asset"
+        )
+
+async def get_assets(
+    categoryId,
+    projectName,
+    isAdmin
+):
+    try:
+        db = get_assets_db()
+        projectName_modified= projectName.replace(" ","_").lower()
+        
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+
+        condition = {}
+        projection = {}
+        
+        if categoryId:
+            condition["category_id"] = categoryId
+        if not isAdmin:
+            condition["is_enabled"] = True
+
+        assets = await collection.find(condition, projection).to_list(length=None)
+
+        for asset in assets:
+            asset["_id"] = str(asset["_id"])
+        
+        return {
+            "assets": assets,
+            "message": f"{len(assets)} assets retrieved successfully"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve assets: {e}"
         )
