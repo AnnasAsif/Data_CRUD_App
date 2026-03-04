@@ -30,3 +30,7 @@ TEMPLATE_FORMAT = "html"
 
 #FILE PREFIX
 FILE_URL_PREFIX = f"http://{SYSTEM_IP}:{SYSTEM_PORT}"
+
+#DEFAULT VIEWS
+DEFAULT_IMAGE = f"{FILE_URL_PREFIX}/static/no_image.jpg"
+DEFAULT_THUMBNAIL = f"{FILE_URL_PREFIX}/static/no_thumbnail.jpg"
