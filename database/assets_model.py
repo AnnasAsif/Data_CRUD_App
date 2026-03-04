@@ -28,6 +28,7 @@ class Asset(BaseModel):
     is_enabled: bool = Field(default=False, description="Asset is enabled")
     is_premium: bool = Field(default=False, description="Asset is premium")
     sequence: int = Field(default=0, description="Asset sequence")
+    is_trending: bool = Field(default=False, description="Asset is Trending")
     views: int = Field(default=0, description="Asset views")
     downloads: int = Field(default=0, description="Asset downloads")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
