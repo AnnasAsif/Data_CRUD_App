@@ -30,7 +30,7 @@ def generate_unique_path(filename):
 
     return output_file_path
 
-def create_thumbnail(image_path, output_path):
+async def create_thumbnail(image_path, output_path):
     with Image.open(image_path) as img:
         #1. Calculate new dimensions
         original_width, original_height = img.size

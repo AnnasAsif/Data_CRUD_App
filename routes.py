@@ -267,6 +267,43 @@ async def get_assets(
     result = await controller.get_assets(categoryId, projectName, isAdmin)
     return result
 
+@router.delete("/delete_asset", response_model=dict)
+async def delete_asset(
+    request: Request,
+):
+    projectName = request.query_params.get("projectName")
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter project name"}
+        )
+    categoryName = request.query_params.get("categoryName")
+    if not categoryName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter Category Name"}
+        )
+    assetName = request.query_params.get("assetName")
+    if not assetName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter Asset Name"}
+        )
+    assetId = request.query_params.get("assetId")
+    if not assetId:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Enter Asset ID"}
+        )
+
+    result = await controller.remove_asset(
+        projectName, 
+        categoryName,
+        assetName,
+        assetId
+    )
+    return result
+
 #=======================================================================================
 #=======================================================================================
 

@@ -1,7 +1,9 @@
 venv_shimeji_app
 __pycache__
 
-/static
+/static/*
+!/static/no_image.jpg
+!/static/no_thumbnail.jpg
 
 # Environment variables - NEVER commit these!
 .env

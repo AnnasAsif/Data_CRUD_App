@@ -59,7 +59,7 @@ async def create_project(
             #Save image
             await save_single_file_by_folder(project_path, projectImage)
             #Save thumbnail
-            create_thumbnail(filepath, thumbnailpath)
+            await create_thumbnail(filepath, thumbnailpath)
 
             image_url= f"{config.FILE_URL_PREFIX}/{project_path}/{filename}"
             thumbnail_url= f"{config.FILE_URL_PREFIX}/{project_path}/thumb_{filename}"
@@ -143,7 +143,7 @@ async def update_project(
             #Save image
             await save_single_file_by_folder(folderfullpath, projectImage)
             #Save thumbnail
-            create_thumbnail(imagepath, thumbnailpath)
+            await create_thumbnail(imagepath, thumbnailpath)
 
             image_url = f"{config.FILE_URL_PREFIX}/{imagepath}"
             image_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
@@ -254,9 +254,9 @@ async def add_categories(
                 thumbnailpath = f"{cat_thumbnail_folder}/{filename}"
 
                 #create thumbnail and make url
-                create_thumbnail(filepath, thumbnailpath)
-                image_url = f"{config.IMAGE_URL_PREFIX}/{filepath}"
-                thumbnail_url = f"{config.IMAGE_URL_PREFIX}/{thumbnailpath}"
+                await create_thumbnail(filepath, thumbnailpath)
+                image_url = f"{config.FILE_URL_PREFIX}/{filepath}"
+                thumbnail_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
 
                 #create folder by category name for assets
                 create_req_folder(f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
@@ -368,9 +368,9 @@ async def update_category(
             await save_single_file_by_folder(category_folder, image)
 
             #create thumbnail and make url
-            create_thumbnail(filepath, thumbnailpath)
-            image_url = f"{config.IMAGE_URL_PREFIX}/{filepath}"
-            thumbnail_url = f"{config.IMAGE_URL_PREFIX}/{thumbnailpath}"
+            await create_thumbnail(filepath, thumbnailpath)
+            image_url = f"{config.FILE_URL_PREFIX}/{filepath}"
+            thumbnail_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
 
         category_model = Category(
             name= Category_Name,
@@ -492,7 +492,7 @@ async def remove_category(
         print(e)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to delete project: {e}"
+            detail=f"Failed to delete category: {e}"
         )
  
 
@@ -650,27 +650,31 @@ async def add_new_asset(
         # logic for creating thumbnail
         if thumbnail:
 
+            print("thumbnail")
             # write thumbnail logic here
-            save_single_file_by_folder(thumbnail_folderpath, thumbnail)
+            await save_single_file_by_folder(category_folderpath, thumbnail)
 
-            thumbnail_url = f"{config.IMAGE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{thumbnail.filename}"
+            thumbnail_url = f"{config.FILE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{thumbnail.filename}"
 
 
         if image:
-
             # write image logic here
             filename= image.filename
 
-            save_single_file_by_folder(image_folderpath, image)
+            await save_single_file_by_folder(image_folderpath, image)
 
-            image_url = f"{config.IMAGE_URL_PREFIX}/static/{projectName_modified}/Original/Asset/{categoryName_modified}/{name_modified}/{filename}"
+            image_url = f"{config.FILE_URL_PREFIX}/static/{projectName_modified}/Original/Asset/{categoryName_modified}/{name_modified}/{filename}"
+
             
             # create a thumbnail
             if thumbnail_url is None:
+                print("image - thumbnail 1")
     
-                create_thumbnail(f"{image_folderpath}/{filename}", f"{thumbnail_folderpath}/{filename}")
-                thumbnail_url = f"{config.IMAGE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{filename}"
+                await create_thumbnail(f"{image_folderpath}/{filename}", f"{thumbnail_folderpath}/{filename}")
+                print("image - thumbnail 2")
 
+                thumbnail_url = f"{config.FILE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{filename}"
+                print("image - thumbnail 3")
 
         if thumbnail_url is None:
             thumbnail_url = config.DEFAULT_THUMBNAIL
@@ -700,6 +704,8 @@ async def add_new_asset(
             status_code=500,
             detail= f"Error while Creating the Asset"
         )
+
+#=================================================
 
 async def get_assets(
     categoryId,
@@ -733,4 +739,45 @@ async def get_assets(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to retrieve assets: {e}"
+        )
+
+#=================================================
+
+async def remove_asset(
+    projectName,
+    categoryName,
+    assetName,
+    assetId
+):
+    projectName_modified = projectName.replace(" ","_").lower()
+    categoryName_modified = categoryName.replace(" ","_").lower()
+    assetName_modified = assetName.replace(" ","_").lower()
+
+    try:
+        db = get_assets_db()
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+
+        # folders to be deleted
+        original_folder =f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{assetName_modified}"
+        thumbnail_folder =f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{assetName_modified}"
+
+        if os.path.exists(original_folder):
+            shutil.rmtree(original_folder)
+        if os.path.exists(thumbnail_folder):
+            shutil.rmtree(thumbnail_folder)
+        
+        # Delete category document from categories collection
+        await collection.delete_one({
+            "_id": ObjectId(assetId)
+        })
+
+        return {
+            "Message": f"{assetName} - asset deleted successfully"
+        }
+    
+    except Exception as e:
+        print(e)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete Asset: {e}"
         )
