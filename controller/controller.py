@@ -383,9 +383,9 @@ async def update_category(
             category_model.thumbnail_url = thumbnail_url
 
         if isEnable is not None:
-            category_model.is_enabled = isEnable
+            category_model.is_enabled = str(isEnable).lower() == "true"
         if isPremium is not None:
-            category_model.is_premium = isPremium
+            category_model.is_premium = str(isPremium).lower() == "true"
 
         filter_criteria = {"_id": ObjectId(categoryId)}
         update_data = {"$set": category_model.model_dump(exclude_unset=True)}
@@ -446,7 +446,6 @@ async def get_all_categories(
 
 #=================================================
 #Delete a catgory and it's assets
-#Delete a complete project alongwith Categories and Assets
 async def remove_category(
     projectName, 
     categoryId
@@ -496,119 +495,8 @@ async def remove_category(
         )
  
 
-
 #=======================================================================================
 #=======================================================================================
-
-async def add_assets(
-    projectName,
-    categoryId, 
-    categoryName, 
-    gifFile,
-    audioFile
-):
-    try:
-        print("In Assets Function")
-        assetName = gifFile.filename.split('.')[0]
-        #======================================================================
-
-        #setting up folder names
-        project_foldername = projectName.replace(" ","_").lower()
-        category_foldername = categoryName.replace(" ","_").lower()
-        asset_foldername = assetName.replace(" ","_").lower()
-        #======================================================================
-        
-        #Original Asset path
-        complete_folderpath = f"{config.STATIC_DIR}/{project_foldername}/Original/Asset/{category_foldername}/{asset_foldername}"
-        create_req_folder(complete_folderpath)
-        #======================================================================
-
-        #setting up database collection
-        db = get_assets_db()
-        collection = db[f"{config.ASSETS_COLLECTION}_{project_foldername}"]
-        #======================================================================        
-
-        #url variables
-        image_url= config.DEFAULT_IMAGE
-        thumbnail_url= config.DEFAULT_THUMBNAIL
-        file_url = f"{config.FILE_URL_PREFIX}/{complete_folderpath}"
-        #======================================================================        
-
-        # saving files
-        await save_single_file_by_folder(complete_folderpath, gifFile)
-        await save_single_file_by_folder(complete_folderpath, audioFile)
-
-        gif_url = f"{file_url}/{gifFile.filename}"
-        audio_url = f"{file_url}/{audioFile.filename}"
-        
-
-        asset_model = Asset(
-            category_id = categoryId,
-            projectName= projectName,
-            name= assetName,
-            image_url= image_url,
-            thumbnail_url= thumbnail_url,
-            moreFields = {
-                "audioFile": audio_url,
-                "gifFile": gif_url
-            }
-        )
-
-        await collection.insert_one(asset_model.model_dump())
-
-        return {
-            "message": "Asset Saved"
-        }
-    except Exception as e:
-        print("ERROR: ", e)
-        raise HTTPException(
-            status_code=500,
-            detail= f"Failed to save asset: {e}"
-        )
-
-
-async def updateAsset(frame_id, requiredFunction):
-    try:
-        db = get_assets_db()
-        collection = db[config.ASSETS_COLLECTION]
-
-        condition = {}
-        if frame_id:
-            condition["_id"] = ObjectId(frame_id)
-
-        updateSet = {}
-        message = ""
-        if requiredFunction == "view":
-            updateSet = {"$inc" : {"views": 1}}
-            message = "View Increased"
-        elif requiredFunction == "enable":
-            updateSet = {"$set" : {"is_enabled": True}}
-            message = "Asset Enabled"
-        elif requiredFunction == "disable":
-            updateSet = {"$set" : {"is_enabled": False}}
-            message = "Asset Disabled"
-        elif requiredFunction == "premium":
-            updateSet = {"$set" : {"is_premium": True}}
-            message = "Asset Made Premium"
-        elif requiredFunction == "notPremium":
-            updateSet = {"$set" : {"is_premium": False}}
-            message = "Asset Removed Premium"
-        else:
-            raise ValueError("No function defined / Wrong function name")
-
-        result = await collection.update_one(condition, updateSet)
-
-        if result.matched_count == 0:
-            return {"error": "Asset not found"}
-        
-        return {"message": message}
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update asset view: {e}"
-        )
-
 
 # Add a new asset
 async def add_new_asset(
@@ -649,8 +537,6 @@ async def add_new_asset(
 
         # logic for creating thumbnail
         if thumbnail:
-
-            print("thumbnail")
             # write thumbnail logic here
             await save_single_file_by_folder(category_folderpath, thumbnail)
 
@@ -668,13 +554,9 @@ async def add_new_asset(
             
             # create a thumbnail
             if thumbnail_url is None:
-                print("image - thumbnail 1")
-    
                 await create_thumbnail(f"{image_folderpath}/{filename}", f"{thumbnail_folderpath}/{filename}")
-                print("image - thumbnail 2")
 
                 thumbnail_url = f"{config.FILE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{filename}"
-                print("image - thumbnail 3")
 
         if thumbnail_url is None:
             thumbnail_url = config.DEFAULT_THUMBNAIL
@@ -687,11 +569,11 @@ async def add_new_asset(
             moreFields= {}
         )
         if isEnable:
-            asset_model.is_enabled = isEnable
+            asset_model.is_enabled = str(isEnable).lower() == "true"
         if isPremium:
-            asset_model.is_premium = isPremium
+            asset_model.is_premium = str(isPremium).lower() == "true"
         if sequence:
-            asset_model.sequence = sequence
+            asset_model.sequence = int(sequence)
 
         await collection.insert_one(asset_model.model_dump())
         return {
@@ -780,4 +662,132 @@ async def remove_asset(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to delete Asset: {e}"
+        )
+
+#=================================================
+
+async def update_asset(
+    projectName,
+    categoryName,
+    assetName,
+    assetId,
+    assetNewName,
+    image,
+    thumbnail,
+    isEnable, 
+    isPremium,
+    sequence,
+    views
+):
+    try:
+        projectName_modified  = projectName.replace(" ","_").lower()
+        categoryName_modified = categoryName.replace(" ","_").lower()
+        assetName_modified    = assetName.replace(" ","_").lower()
+
+        db = get_assets_db()
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+
+        name = assetName
+        assetPath = f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{assetName_modified}"
+        thumbnailPath = f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{assetName_modified}"
+
+        obj={}
+        #Setting up New Name and rename the folders
+        if assetNewName:
+            assetNewName_modified = assetNewName.replace(" ","_").lower()
+
+            newAssetPath = f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{assetNewName_modified}"
+            newThumbnailPath = f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{assetNewName_modified}"
+
+            rename_folder(assetPath, newAssetPath)
+            rename_folder(thumbnailPath, newThumbnailPath)
+
+            #swith old values to new values
+            name = assetNewName
+            assetPath = newAssetPath
+            thumbnailPath = newThumbnailPath
+            #store in object
+            obj["name"] = assetNewName
+
+        image_url = None
+        thumbnail_url = None
+
+        # logic for creating thumbnail
+        if thumbnail:
+            await save_single_file_by_folder(thumbnailPath, thumbnail)
+
+            thumbnail_url = f"{thumbnailPath}/{thumbnail.filename}"
+
+
+        if image:
+            filename= image.filename
+
+            await save_single_file_by_folder(assetPath, image)
+
+            image_url = f"{assetPath}/{filename}"
+
+            
+            # create a thumbnail
+            if thumbnail_url is None:
+                await create_thumbnail(f"{assetPath}/{filename}", f"{thumbnailPath}/{filename}")
+
+                thumbnail_url = f"{thumbnailPath}/{filename}"
+
+        if image_url:
+            obj["image_url"] = config.FILE_URL_PREFIX +'/'+ image_url
+        if thumbnail_url:
+            obj["thumbnail_url"] = config.FILE_URL_PREFIX +'/'+  thumbnail_url
+        if isEnable:
+            obj["is_enabled"] = str(isEnable).lower() == "true"
+        if isPremium:
+            obj["is_premium"] = str(isPremium).lower() == "true"
+        if sequence:
+            obj["sequence"] = int(sequence)
+        if views:
+            obj["views"] = int(views)
+
+        print(obj)
+
+        await collection.update_one(
+            {"_id": ObjectId(assetId)},
+            {"$set": obj}
+        )
+
+        return {
+            "Message": f"'{assetName}' - asset updated"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error updating the asset: {e}"
+        )
+
+#=================================================
+
+async def increaseView(
+    projectName,
+    asset_id
+):
+    try:
+        db = get_assets_db()
+
+        projectName_modified = projectName.replace(" ","_").lower()
+
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+
+        condition = {"_id": ObjectId(asset_id)}            
+        updateSet = {"$inc" : {"views": 1}}
+
+        result = await collection.update_one(condition, updateSet)
+
+        if result.matched_count == 0:
+            return {"error": "Asset not found"}
+        
+        return {"message": "Views Count incremented"}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update asset views-count: {e}"
         )

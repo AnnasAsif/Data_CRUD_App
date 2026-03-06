@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, UploadFile, File, Form
 from fastapi import HTTPException
+from fastapi.responses import JSONResponse
 
 from controller import controller
 
@@ -169,43 +170,6 @@ async def delete_category(
 #=======================================================================================
 #=======================================================================================
 
-@router.post("/add_assets", response_model=dict)
-async def add_assets(
-    request: Request,
-    projectName: str = Form(...),
-    categoryId: str = Form(...),
-    categoryName: str = Form(...),
-    gifFile: UploadFile = File(...),
-    audioFile: UploadFile = File(...)
-):
-    if not projectName:
-        return JSONResponse(
-            status_code=400, # 400 is better for "User Error/Bad Request"
-            content={"status": "error", "message": "Enter ProjectName"}
-        )
-
-    # Set the state so the middleware can access it later
-    request.state.project_name = projectName
-    
-    if not categoryId or not categoryName:
-        return JSONResponse(
-            status_code=400, # 400 is better for "User Error/Bad Request"
-            content={"status": "error", "message": "Category Params missing"}
-        )
-    if not gifFile or not audioFile:
-        return JSONResponse(
-            status_code=400, # 400 is better for "User Error/Bad Request"
-            content={"status": "error", "message": "Missing Files"}
-        )
-    result = await controller.add_assets(
-        projectName,
-        categoryId, 
-        categoryName, 
-        gifFile, 
-        audioFile)
-
-    return result
-
 @router.post("/create_asset", response_model=dict)
 async def create_asset(
     request: Request,
@@ -304,28 +268,53 @@ async def delete_asset(
     )
     return result
 
-#=======================================================================================
-#=======================================================================================
+@router.put("/edit_asset", response_model= dict)
+async def edit_asset(
+    projectName: str = Form(...),
+    categoryName: str = Form(...),
+    assetName: str = Form(...),
+    assetId: str = Form(...),
+    assetNewName: str = Form(None),
+    image: UploadFile = File(None),
+    thumbnail: UploadFile = File(None),
+    isEnable: str = Form(None),
+    isPremium: str = Form(None),
+    sequence: str = Form(None),
+    views: str = Form(None)
+):
+    if assetNewName is None and image is None and thumbnail is None and isEnable is None and isPremium is None and sequence is None and views is None:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "No Value available for updating"}
+        )
 
-@router.put("/updateAsset", response_model=dict)
-async def updateAsset(
+    result = await controller.update_asset(
+        projectName, categoryName, assetName, assetId,
+        assetNewName, image, thumbnail,
+        isEnable, isPremium, sequence, views
+    )
+
+    return result
+
+@router.patch("/incrementView", response_model=dict)
+async def incrementViews(
     request: Request
 ):
-    frame_id = request.query_params.get("frame_id")
-    requiredFunction = request.query_params.get("requiredFunction")
-
-    if not frame_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Frame ID is missing"
+    projectName = request.query_params.get("projectName")
+    if not projectName:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Missing Project Name"}
         )
-    if not requiredFunction:
-        raise HTTPException(
-            status_code=400,
-            detail="requiredFunction is missing"
+    assetId = request.query_params.get("assetId")
+    if not assetId:
+        return JSONResponse(
+            status_code=400, # 400 is better for "User Error/Bad Request"
+            content={"status": "error", "message": "Missing Asset ID"}
         )
 
-    result = await controller.updateAsset(frame_id, requiredFunction)
+    result = await controller.increaseView(projectName, assetId)
+
     return result
 
 #=======================================================================================
