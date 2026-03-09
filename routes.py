@@ -319,3 +319,21 @@ async def incrementViews(
 
 #=======================================================================================
 #=======================================================================================
+
+
+@router.put("/addMoreFields", response_model=dict)
+async def addingFields(
+    request: Request,
+    projectName: str = Form(...),
+    categoryName: str = Form(...),
+    assetName: str = Form(...),
+    assetId: str = Form(...)
+):
+    result = await controller.addMoreFields(
+        request,
+        projectName,
+        categoryName,
+        assetId,
+        assetName
+    )
+    return result

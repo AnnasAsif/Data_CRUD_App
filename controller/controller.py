@@ -14,7 +14,7 @@ from utils.functions import create_target_Assets_folders, save_files_by_folder,s
 
 from environment import config
 
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 #=======================================================================================
 #=======================================================================================
 #=======================================================================================
@@ -790,4 +790,115 @@ async def increaseView(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to update asset views-count: {e}"
+        )
+
+#=======================================================================================
+#=======================================================================================
+
+async def addMoreFields(
+    request,
+    projectName,
+    categoryName,
+    assetId,
+    assetName
+):
+    try:
+        # Modifying names
+        projectName_modified = projectName.replace(" ","_").lower()
+        categoryName_modified = categoryName.replace(" ","_").lower()
+        assetName_modified = assetName.replace(" ","_").lower()
+        
+        db = get_assets_db()
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+
+        fileFolders = f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{assetName_modified}"
+
+        # 1. Get the multipart form data
+        form_data = await request.form()
+        more_fields = {}
+        
+        # We use a set to track indices we've already processed
+        processed_indices = set()
+
+        for form_key in form_data.keys():
+            if form_key.startswith("key"):
+                index = form_key.replace("key", "")
+                if index in processed_indices:
+                    continue
+                
+                # The name of the field the user defined (e.g., "profile_pic" or "tags")
+                field_name = form_data.get(form_key)
+                # The actual data (could be multiple values if using the same name)
+                value_key = f"value{index}"
+                raw_values = form_data.getlist(value_key)
+
+                if not raw_values or not field_name:
+                    continue
+
+                processed_items = []
+                for item in raw_values:
+                    # 1. Flatten if it's a single-element list (the 'UploadFile' issue)
+                    if isinstance(item, list):
+                        if not item: continue # Skip empty lists
+                        item = item[0]
+
+                    # CASE 1: Handle Files
+                    # This bypasses the import/memory mismatch issue
+                    is_upload_file = type(item).__name__ == "UploadFile"
+
+                    if is_upload_file:
+                        print("A File")
+                        if item.filename:
+                            try:
+                                # IMPORTANT: Your saving logic here
+                                await save_single_file_by_folder(fileFolders, item)
+                                fileURL = f"{config.FILE_URL_PREFIX}/{fileFolders}/{item.filename}"
+
+                                processed_items.append(fileURL)
+                            finally:
+                                # Always close the file to free system resources
+                                await item.close()
+                    
+                    # CASE 2: Handle Strings / JSON
+                    elif isinstance(item, str):
+                        print("A String")
+                        stripped_item = item.strip()
+                        # Check if it looks like JSON (starts with [ or {)
+                        if stripped_item.startswith(('[', '{')):
+                            try:
+                                processed_items.append(json.loads(stripped_item))
+                            except (json.JSONDecodeError, TypeError):
+                                processed_items.append(stripped_item)
+                        else:
+                            processed_items.append(stripped_item)
+
+                # Assign to dictionary
+                if processed_items:
+                    # If only one item, store it directly; otherwise store as a list
+                    more_fields[field_name] = (
+                        processed_items[0] if len(processed_items) == 1 else processed_items
+                    )
+                
+                processed_indices.add(index)
+        
+        update_data = {f"moreFields.{k}": v for k, v in more_fields.items()}
+
+        result = await collection.update_one(
+            {"_id": ObjectId(assetId)},
+            {"$set": update_data}
+        )
+
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Asset not found"
+            )
+
+        return {
+            "message": f"Successfully added/updated {len(update_data)} field(s) in moreFields",
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error adding moreFields: {e}"
         )

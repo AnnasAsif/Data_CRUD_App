@@ -10,4 +10,6 @@ PROTECTED_PATHS = [
     "/api/crud/add_assets",
     "/api/crud/create_asset",
     "/api/crud/updateAsset",
+    "/api/crud/incrementView",
+    "/api/crud/addMoreFields",
 ]
