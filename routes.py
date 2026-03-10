@@ -327,7 +327,7 @@ async def addingFields(
     projectName: str = Form(...),
     categoryName: str = Form(...),
     assetName: str = Form(...),
-    assetId: str = Form(...)
+    assetId: str = Form(None)
 ):
     result = await controller.addMoreFields(
         request,
@@ -335,5 +335,18 @@ async def addingFields(
         categoryName,
         assetId,
         assetName
+    )
+    return result
+
+@router.delete("/deleteMoreFields", response_model=dict)
+async def deletingFields(
+    projectName: str = Form(...),
+    assetId: str = Form(None),
+    fields_to_delete: list[str] = Form(...)
+):
+    result = await controller.deleteMoreFields(
+        projectName,
+        assetId,
+        fields_to_delete
     )
     return result

@@ -883,10 +883,17 @@ async def addMoreFields(
         
         update_data = {f"moreFields.{k}": v for k, v in more_fields.items()}
 
-        result = await collection.update_one(
-            {"_id": ObjectId(assetId)},
-            {"$set": update_data}
-        )
+        if assetId:
+            result = await collection.update_one(
+                {"_id": ObjectId(assetId)},
+                {"$set": update_data}
+            )
+        else:
+            result = await collection.update_many(
+                {},
+                {"$set": update_data}
+            )
+            
 
         if result.matched_count == 0:
             raise HTTPException(
@@ -901,4 +908,56 @@ async def addMoreFields(
         raise HTTPException(
             status_code=500,
             detail=f"Error adding moreFields: {e}"
+        )
+
+
+#=================================================
+
+async def deleteMoreFields(
+    projectName: str,
+    assetId: str,
+    fields_to_delete: list  # Pass a list of keys, e.g., ["image", "projectName"]
+):
+    try:
+        # 1. Setup Database Connection
+        projectName_modified = projectName.replace(" ", "_").lower()
+        db = get_assets_db()
+        collection = db[f"{config.ASSETS_COLLECTION}_{projectName_modified}"]
+
+        if not fields_to_delete:
+            return {"message": "No fields provided for deletion"}
+
+        # 2. Build the $unset object using dot notation
+        # MongoDB expects: {"moreFields.key1": "", "moreFields.key2": ""}
+        unset_data = {f"moreFields.{field}": "" for field in fields_to_delete}
+
+        # 3. Perform the update
+        if assetId:
+            result = await collection.update_one(
+                {"_id": ObjectId(assetId)},
+                {"$unset": unset_data}
+            )
+        else:
+            result = await collection.update_many(
+                {},
+                {"$unset": unset_data}
+            )
+
+
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404, 
+                detail="Asset not found"
+            )
+
+        return {
+            "status": "success",
+            "message": f"Deleted {len(fields_to_delete)} field(s) from moreFields",
+            "deleted_fields": fields_to_delete
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error deleting from moreFields: {str(e)}"
         )
