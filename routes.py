@@ -28,6 +28,8 @@ async def create_project(
             status_code=400, # 400 is better for "User Error/Bad Request"
             content={"status": "error", "message": "Enter project name"}
         )
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
     
     result = await controller.create_project(projectName, projectImage)
     return result
@@ -44,6 +46,9 @@ async def edit_project(
             status_code=400, # 400 is better for "User Error/Bad Request"
             content={"status": "error", "message": "Enter project name"}
         )
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
     
     result = await controller.update_project(projectName, projectImage, newprojectName)
     return result
@@ -65,6 +70,9 @@ async def delete_project(
             status_code=400, # 400 is better for "User Error/Bad Request"
             content={"status": "error", "message": "Enter project name"}
         )
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
 
     result = await controller.remove_project(projectName)
     return result
@@ -138,6 +146,10 @@ async def edit_category(
             status_code=400, # 400 is better for "User Error/Bad Request"
             content={"status": "error", "message": "Enter project name"}
         )
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+
     if not categoryId:
         return JSONResponse(
             status_code=400, # 400 is better for "User Error/Bad Request"
@@ -157,6 +169,10 @@ async def delete_category(
             status_code=400, # 400 is better for "User Error/Bad Request"
             content={"status": "error", "message": "Enter project name"}
         )
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+
     categoryId = request.query_params.get("categoryId")
     if not categoryId:
         return JSONResponse(
@@ -241,6 +257,9 @@ async def delete_asset(
             status_code=400, # 400 is better for "User Error/Bad Request"
             content={"status": "error", "message": "Enter project name"}
         )
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+    
     categoryName = request.query_params.get("categoryName")
     if not categoryName:
         return JSONResponse(
@@ -288,6 +307,9 @@ async def edit_asset(
             content={"status": "error", "message": "No Value available for updating"}
         )
 
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+
     result = await controller.update_asset(
         projectName, categoryName, assetName, assetId,
         assetNewName, image, thumbnail,
@@ -329,6 +351,10 @@ async def addingFields(
     assetName: str = Form(...),
     assetId: str = Form(None)
 ):
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+
     result = await controller.addMoreFields(
         request,
         projectName,
@@ -344,6 +370,10 @@ async def deletingFields(
     assetId: str = Form(None),
     fields_to_delete: list[str] = Form(...)
 ):
+
+    # Set the state so the middleware can access it later
+    request.state.project_name = projectName
+
     result = await controller.deleteMoreFields(
         projectName,
         assetId,
