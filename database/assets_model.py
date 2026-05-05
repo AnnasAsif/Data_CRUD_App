@@ -1,12 +1,12 @@
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
-from bson import ObjectId
 from typing import Dict, Any
 
 # Analytics Models
 class Category(BaseModel):
     name: str = Field(..., description="Category name")
+    asset_type: Optional[str] = Field(default=None, description="Type of assets in this category (e.g. frame, sticker, suits, gif, etc.)")
     is_enabled: bool = Field(default=False, description="Category is enabled")
     is_premium: bool = Field(default=False, description="Category is premium")
     sequence: int = Field(default=0, description="Category sequence")

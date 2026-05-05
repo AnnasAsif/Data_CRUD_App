@@ -1,5 +1,6 @@
 import os
 import shutil
+import json
 from bson import ObjectId
 from datetime import datetime
 
@@ -21,7 +22,8 @@ from fastapi import HTTPException, UploadFile
 #Function to create new Project Instance
 async def create_project(
     projectName,
-    projectImage
+    projectImage,
+    assetType=None
 ):
     try:
         db = get_assets_db()
@@ -68,7 +70,8 @@ async def create_project(
         project_model = Project(
             name = projectName,
             image_url = image_url,
-            thumbnail_url = thumbnail_url
+            thumbnail_url = thumbnail_url,
+            asset_type = assetType
         )
         await collection.insert_one(project_model.model_dump())
 
@@ -114,7 +117,8 @@ async def get_projects(
 async def update_project(
     projectName,
     projectImage,
-    newprojectName
+    newprojectName,
+    assetType=None
 ):
     try:
         db = get_assets_db()
@@ -127,9 +131,8 @@ async def update_project(
         foldername = projectName.replace(" ","_").lower()
         folderfullpath = f"{config.STATIC_DIR}/{foldername}"
 
-        newfoldername = newprojectName.replace(" ","_").lower()
-        if newfoldername:
-            newfolderfullpath = f"{config.STATIC_DIR}/{newfoldername}"
+        newfoldername = newprojectName.replace(" ","_").lower() if newprojectName else None
+        newfolderfullpath = f"{config.STATIC_DIR}/{newfoldername}" if newfoldername else None
         
         image_url= None
         thumbnail_url= None
@@ -146,9 +149,10 @@ async def update_project(
             await create_thumbnail(imagepath, thumbnailpath)
 
             image_url = f"{config.FILE_URL_PREFIX}/{imagepath}"
-            image_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
+            thumbnail_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
 
-        if newfoldername:
+        # Only rename folder if new name is provided AND different from old name
+        if newfoldername and newfolderfullpath and newfoldername != foldername:
             rename_folder(folderfullpath, newfolderfullpath)
             
         #model for updation
@@ -161,6 +165,8 @@ async def update_project(
             project_model.image_url = image_url
         if thumbnail_url is not None:
             project_model.thumbnail_url = thumbnail_url
+        if assetType is not None:
+            project_model.asset_type = assetType
 
         filter_criteria = {"name": projectName}
         update_data = {"$set": project_model.model_dump(exclude_unset=True)}
@@ -224,7 +230,8 @@ async def add_categories(
     categories, 
     projectName,
     images, 
-    has_images
+    has_images,
+    assetType=None
 ):
     try:
         project_foldername = projectName.replace(" ","_").lower()
@@ -259,14 +266,15 @@ async def add_categories(
                 thumbnail_url = f"{config.FILE_URL_PREFIX}/{thumbnailpath}"
 
                 #create folder by category name for assets
-                create_req_folder(f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
+                create_req_folder(f"{category_folder.replace('Category','Asset')}/{category.replace(' ','_').lower()}")
                 #create folder by category name for assets thumbnails
-                create_req_folder(f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
+                create_req_folder(f"{cat_thumbnail_folder.replace('Category','Asset')}/{category.replace(' ','_').lower()}")
                 
                 category_model = Category(
                     name= category,
                     image_url= image_url,
-                    thumbnail_url= thumbnail_url
+                    thumbnail_url= thumbnail_url,
+                    asset_type= assetType
                 )
 
                 await collection.insert_one(category_model.model_dump())
@@ -288,13 +296,14 @@ async def add_categories(
                 category_model = Category(
                     name=category,
                     image_url= config.DEFAULT_IMAGE,
-                    thumbnail_url= config.DEFAULT_THUMBNAIL
+                    thumbnail_url= config.DEFAULT_THUMBNAIL,
+                    asset_type= assetType
                 )
 
                 #create folder for assets
-                create_req_folder(f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
+                create_req_folder(f"{category_folder.replace('Category','Asset')}/{category.replace(' ','_').lower()}")
                 #create folder for assets thumbnails
-                create_req_folder(f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}")
+                create_req_folder(f"{cat_thumbnail_folder.replace('Category','Asset')}/{category.replace(' ','_').lower()}")
 
                 await collection.insert_one(category_model.model_dump())
                 created_count += 1
@@ -339,19 +348,19 @@ async def update_category(
         category_folder = f"{config.STATIC_DIR}/{project_foldername}/Original/Category"
         cat_thumbnail_folder = f"{config.STATIC_DIR}/{project_foldername}/Thumbnail/Category"
 
-        # If new category name is provided
-        if categoryName is not None:
+        # If new category name is provided AND it's different from the old name
+        if categoryName is not None and categoryName.replace(" ","_").lower() != old_categoryName:
             category = categoryName
             Category_Name = categoryName
 
             # New Folder paths
-            new_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
-            new_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{category.replace(" ","_").lower()}"
+            new_AssetsFolder = f"{category_folder.replace('Category','Asset')}/{category.replace(' ','_').lower()}"
+            new_Assets_thumbnails = f"{cat_thumbnail_folder.replace('Category','Asset')}/{category.replace(' ','_').lower()}"
             # Old Folder Paths
-            old_AssetsFolder = f"{category_folder.replace("Category","Asset")}/{old_categoryName}"
-            old_Assets_thumbnails = f"{cat_thumbnail_folder.replace("Category","Asset")}/{old_categoryName}"
+            old_AssetsFolder = f"{category_folder.replace('Category','Asset')}/{old_categoryName}"
+            old_Assets_thumbnails = f"{cat_thumbnail_folder.replace('Category','Asset')}/{old_categoryName}"
 
-            # Renaming folders
+            # Renaming folders only if names are different
             rename_folder(old_AssetsFolder, new_AssetsFolder)
             rename_folder(old_Assets_thumbnails, new_Assets_thumbnails)
         
@@ -360,8 +369,6 @@ async def update_category(
         if image:
             print('image found')
             filename = image.filename
-            category = filename.split(".")[0]
-            Category_Name = category
             filepath = f"{category_folder}/{filename}"
             thumbnailpath = f"{cat_thumbnail_folder}/{filename}"
 
@@ -538,7 +545,7 @@ async def add_new_asset(
         # logic for creating thumbnail
         if thumbnail:
             # write thumbnail logic here
-            await save_single_file_by_folder(category_folderpath, thumbnail)
+            await save_single_file_by_folder(thumbnail_folderpath, thumbnail)
 
             thumbnail_url = f"{config.FILE_URL_PREFIX}/static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{name_modified}/{thumbnail.filename}"
 
@@ -692,20 +699,26 @@ async def update_asset(
         thumbnailPath = f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{assetName_modified}"
 
         obj={}
-        #Setting up New Name and rename the folders
+        #Setting up New Name and rename the folders only if name is different
         if assetNewName:
             assetNewName_modified = assetNewName.replace(" ","_").lower()
 
-            newAssetPath = f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{assetNewName_modified}"
-            newThumbnailPath = f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{assetNewName_modified}"
+            # Only rename if the new name is different from the old name
+            if assetNewName_modified != assetName_modified:
+                newAssetPath = f"static/{projectName_modified}/Original/Asset/{categoryName_modified}/{assetNewName_modified}"
+                newThumbnailPath = f"static/{projectName_modified}/Thumbnail/Asset/{categoryName_modified}/{assetNewName_modified}"
 
-            rename_folder(assetPath, newAssetPath)
-            rename_folder(thumbnailPath, newThumbnailPath)
+                rename_folder(assetPath, newAssetPath)
+                rename_folder(thumbnailPath, newThumbnailPath)
 
-            #swith old values to new values
-            name = assetNewName
-            assetPath = newAssetPath
-            thumbnailPath = newThumbnailPath
+                #switch old values to new values
+                name = assetNewName
+                assetPath = newAssetPath
+                thumbnailPath = newThumbnailPath
+            else:
+                # Name is the same, just update the name field
+                name = assetNewName
+            
             #store in object
             obj["name"] = assetNewName
 

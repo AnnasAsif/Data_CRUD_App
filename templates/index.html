@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUD App Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: opacity 0.3s ease;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .features {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .features h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .features li {
+            padding: 10px 0;
+            color: #666;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .features li:before {
+            content: "✓ ";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 CRUD App Dashboard</h1>
+            <p>Manage your apps, categories, and assets with ease</p>
+        </div>
+        
+        <div class="cards">
+            <div class="card" onclick="window.location.href='/api/crud/ui/projects'">
+                <div class="card-icon">📱</div>
+                <h2>Projects</h2>
+                <p>Create and manage your applications. Define asset types like frames, stickers, suits, or GIFs.</p>
+                <a href="/api/crud/ui/projects" class="btn">Manage Projects</a>
+            </div>
+            
+            <div class="card" onclick="window.location.href='/api/crud/ui/categories'">
+                <div class="card-icon">📂</div>
+                <h2>Categories</h2>
+                <p>Organize your content into categories for better structure and navigation.</p>
+                <a href="/api/crud/ui/categories" class="btn">Manage Categories</a>
+            </div>
+            
+            <div class="card" onclick="window.location.href='/api/crud/ui/assets'">
+                <div class="card-icon">🎨</div>
+                <h2>Assets</h2>
+                <p>Upload and manage your media assets including images, GIFs, videos, and audio files.</p>
+                <a href="/api/crud/ui/assets" class="btn">Manage Assets</a>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h3>✨ Key Features</h3>
+            <ul>
+                <li>Create multiple projects with custom asset types (frames, stickers, suits, GIFs, etc.)</li>
+                <li>Organize content with categories and subcategories</li>
+                <li>Support for multiple file formats: .mp3, .webp, .png, .mp4, .gif, .jpg, and more</li>
+                <li>Automatic thumbnail generation for images and videos</li>
+                <li>Enable/disable and premium/free content management</li>
+                <li>Custom fields support for flexible data storage</li>
+                <li>View tracking and analytics</li>
+                <li>RESTful API for easy integration</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

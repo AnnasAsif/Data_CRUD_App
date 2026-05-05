@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assets Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+        }
+        
+        .selector-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .selector-group select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            min-width: 200px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.3s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85em;
+            margin: 2px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 3% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-group input {
+            width: auto;
+        }
+        
+        .assets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .asset-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .asset-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .asset-preview {
+            width: 100%;
+            height: 220px;
+            object-fit: contain;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .asset-preview img,
+        .asset-preview video {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .asset-info {
+            padding: 20px;
+        }
+        
+        .asset-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+        
+        .asset-badges {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+        
+        .badge-enabled {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-disabled {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .badge-premium {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .badge-free {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .asset-stats {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        .asset-actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .file-type-icon {
+            font-size: 4em;
+            color: #667eea;
+        }
+        
+        .more-fields-container {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .more-field-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .more-field-row input {
+            flex: 1;
+        }
+        
+        .btn-add-field {
+            background: #28a745;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/api/crud/ui/categories" class="back-link">← Back to Categories</a>
+        
+        <div class="header">
+            <div class="header-top">
+                <h1>🎨 Assets Management</h1>
+                <button class="btn" onclick="openCreateModal()">+ Create Asset</button>
+            </div>
+            <div class="selector-group">
+                <div>
+                    <label>Project:</label>
+                    <select id="projectSelector" onchange="onProjectChange()">
+                        <option value="">-- Select Project --</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Category:</label>
+                    <select id="categorySelector" onchange="loadAssets()">
+                        <option value="">-- Select Category --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div id="assetsContainer" class="assets-grid">
+            <div class="loading">Please select a project and category</div>
+        </div>
+    </div>
+    
+    <!-- Create Asset Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCreateModal()">&times;</span>
+            <h2>Create New Asset</h2>
+            <form id="createForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Asset Name *</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Asset File (image/gif/video/audio) *</label>
+                    <input type="file" name="image" required>
+                    <small>Supported: .jpg, .png, .gif, .webp, .mp4, .mp3, etc.</small>
+                </div>
+                <div class="form-group">
+                    <label>Thumbnail (optional - auto-generated if not provided)</label>
+                    <input type="file" name="thumbnail" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>Sequence</label>
+                    <input type="number" name="sequence" value="0">
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="isEnable" id="createIsEnable" checked>
+                    <label for="createIsEnable">Enabled</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="isPremium" id="createIsPremium">
+                    <label for="createIsPremium">Premium</label>
+                </div>
+                <button type="submit" class="btn">Create Asset</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Asset Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Asset</h2>
+            <form id="editForm" enctype="multipart/form-data">
+                <input type="hidden" name="assetId" id="editAssetId">
+                <input type="hidden" name="assetName" id="editAssetOldName">
+                <div class="form-group">
+                    <label>Asset Name</label>
+                    <input type="text" name="assetNewName" id="editAssetName">
+                </div>
+                <div class="form-group">
+                    <label>New Asset File</label>
+                    <input type="file" name="image">
+                </div>
+                <div class="form-group">
+                    <label>New Thumbnail</label>
+                    <input type="file" name="thumbnail" accept="image/*">
+                </div>
+                <div class="form-group">
+                    <label>Sequence</label>
+                    <input type="number" name="sequence" id="editSequence">
+                </div>
+                <div class="form-group">
+                    <label>Views</label>
+                    <input type="number" name="views" id="editViews">
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="isEnable" id="editIsEnable">
+                    <label for="editIsEnable">Enabled</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="isPremium" id="editIsPremium">
+                    <label for="editIsPremium">Premium</label>
+                </div>
+                <button type="submit" class="btn">Update Asset</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Add More Fields Modal -->
+    <div id="moreFieldsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeMoreFieldsModal()">&times;</span>
+            <h2>Add Custom Fields</h2>
+            <form id="moreFieldsForm" enctype="multipart/form-data">
+                <input type="hidden" name="assetId" id="moreFieldsAssetId">
+                <input type="hidden" name="assetName" id="moreFieldsAssetName">
+                <div class="more-fields-container">
+                    <div id="customFieldsContainer">
+                        <div class="more-field-row">
+                            <input type="text" placeholder="Field name (e.g., 'audio')" class="field-key">
+                            <input type="file" class="field-value">
+                            <button type="button" class="btn btn-danger btn-small" onclick="this.parentElement.remove()">Remove</button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-add-field btn-small" onclick="addCustomField()">+ Add Field</button>
+                </div>
+                <button type="submit" class="btn">Save Custom Fields</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let currentProject = '';
+        let currentCategory = '';
+        let currentCategoryName = '';
+        let assets = [];
+        
+        window.onload = function() {
+            loadProjects();
+            const urlParams = new URLSearchParams(window.location.search);
+            currentProject = urlParams.get('projectName') || '';
+            currentCategory = urlParams.get('categoryId') || '';
+            currentCategoryName = urlParams.get('categoryName') || '';
+        };
+        
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/crud/get_projects');
+                const data = await response.json();
+                const selector = document.getElementById('projectSelector');
+                
+                selector.innerHTML = '<option value="">-- Select Project --</option>' +
+                    data.projects.map(p => 
+                        `<option value="${p.name}" ${p.name === currentProject ? 'selected' : ''}>${p.name}</option>`
+                    ).join('');
+                
+                if (currentProject) {
+                    loadCategories();
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+        
+        async function onProjectChange() {
+            currentProject = document.getElementById('projectSelector').value;
+            currentCategory = '';
+            document.getElementById('categorySelector').value = '';
+            
+            if (currentProject) {
+                await loadCategories();
+            } else {
+                document.getElementById('categorySelector').innerHTML = '<option value="">-- Select Category --</option>';
+                document.getElementById('assetsContainer').innerHTML = 
+                    '<div class="loading">Please select a project</div>';
+            }
+        }
+        
+        async function loadCategories() {
+            if (!currentProject) return;
+            
+            try {
+                const response = await fetch(`/api/crud/get_categories?projectName=${encodeURIComponent(currentProject)}&isAdmin=true`);
+                const data = await response.json();
+                const selector = document.getElementById('categorySelector');
+                
+                selector.innerHTML = '<option value="">-- All Categories --</option>' +
+                    data.categories.map(c => 
+                        `<option value="${c._id}" data-name="${c.name}" ${c._id === currentCategory ? 'selected' : ''}>${c.name}</option>`
+                    ).join('');
+                
+                if (currentCategory) {
+                    loadAssets();
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+        
+        async function loadAssets() {
+            const selector = document.getElementById('categorySelector');
+            currentCategory = selector.value;
+            
+            if (selector.selectedIndex > 0) {
+                currentCategoryName = selector.options[selector.selectedIndex].getAttribute('data-name');
+            }
+            
+            if (!currentProject) {
+                document.getElementById('assetsContainer').innerHTML = 
+                    '<div class="loading">Please select a project</div>';
+                return;
+            }
+            
+            document.getElementById('assetsContainer').innerHTML = 
+                '<div class="loading">Loading assets...</div>';
+            
+            try {
+                let url = `/api/crud/get_assets?projectName=${encodeURIComponent(currentProject)}&isAdmin=true`;
+                if (currentCategory) {
+                    url += `&categoryId=${currentCategory}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                assets = data.assets || [];
+                displayAssets();
+            } catch (error) {
+                document.getElementById('assetsContainer').innerHTML = 
+                    '<div class="loading">Error loading assets</div>';
+            }
+        }
+        
+        function displayAssets() {
+            const container = document.getElementById('assetsContainer');
+            
+            if (assets.length === 0) {
+                container.innerHTML = '<div class="loading">No assets found. Create your first asset!</div>';
+                return;
+            }
+            
+            container.innerHTML = assets.map(asset => {
+                const fileUrl = asset.image_url || '';
+                const thumbnailUrl = asset.thumbnail_url || '';
+                const isVideo = fileUrl.match(/\.(mp4|webm|ogg)$/i);
+                const isAudio = fileUrl.match(/\.(mp3|wav|ogg)$/i);
+                const isImage = fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+                
+                let preview = '';
+                if (isVideo) {
+                    preview = `<video src="${fileUrl}" controls style="max-width:100%; max-height:220px;"></video>`;
+                } else if (isAudio) {
+                    preview = `<div class="file-type-icon">🎵</div><audio src="${fileUrl}" controls style="width:90%;"></audio>`;
+                } else if (isImage) {
+                    preview = `<img src="${thumbnailUrl}" alt="${asset.name}" onerror="this.src='/static/no_thumbnail.jpg'">`;
+                } else {
+                    preview = `<div class="file-type-icon">📄</div>`;
+                }
+                
+                return `
+                    <div class="asset-card">
+                        <div class="asset-preview">
+                            ${preview}
+                        </div>
+                        <div class="asset-info">
+                            <div class="asset-name">${asset.name}</div>
+                            <div class="asset-badges">
+                                <span class="badge ${asset.is_enabled ? 'badge-enabled' : 'badge-disabled'}">
+                                    ${asset.is_enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                                <span class="badge ${asset.is_premium ? 'badge-premium' : 'badge-free'}">
+                                    ${asset.is_premium ? 'Premium' : 'Free'}
+                                </span>
+                            </div>
+                            <div class="asset-stats">
+                                👁️ ${asset.views || 0} views | 📊 Seq: ${asset.sequence || 0}
+                            </div>
+                            <div class="asset-actions">
+                                <button class="btn btn-small btn-secondary" onclick='editAsset(${JSON.stringify(asset).replace(/'/g, "&apos;")})'>
+                                    Edit
+                                </button>
+                                <button class="btn btn-small" onclick='openMoreFieldsModal("${asset._id}", "${asset.name}", "${asset.category_id}")'>
+                                    + Fields
+                                </button>
+                                <button class="btn btn-small btn-danger" onclick="deleteAsset('${asset._id}', '${asset.name}')">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function openCreateModal() {
+            if (!currentProject || !currentCategory) {
+                alert('Please select a project and category first');
+                return;
+            }
+            document.getElementById('createModal').style.display = 'block';
+        }
+        
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+            document.getElementById('createForm').reset();
+        }
+        
+        document.getElementById('createForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('projectName', currentProject);
+            formData.append('categoryId', currentCategory);
+            formData.append('categoryName', currentCategoryName);
+            
+            try {
+                const response = await fetch('/api/crud/create_asset', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Asset created successfully!');
+                    closeCreateModal();
+                    loadAssets();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to create asset'));
+                }
+            } catch (error) {
+                alert('Error creating asset: ' + error.message);
+            }
+        };
+        
+        function editAsset(asset) {
+            document.getElementById('editAssetId').value = asset._id;
+            document.getElementById('editAssetOldName').value = asset.name;
+            document.getElementById('editAssetName').value = asset.name;
+            document.getElementById('editSequence').value = asset.sequence || 0;
+            document.getElementById('editViews').value = asset.views || 0;
+            document.getElementById('editIsEnable').checked = asset.is_enabled;
+            document.getElementById('editIsPremium').checked = asset.is_premium;
+            document.getElementById('editModal').style.display = 'block';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('editForm').reset();
+        }
+        
+        document.getElementById('editForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('projectName', currentProject);
+            formData.append('categoryName', currentCategoryName);
+            
+            try {
+                const response = await fetch('/api/crud/edit_asset', {
+                    method: 'PUT',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Asset updated successfully!');
+                    closeEditModal();
+                    loadAssets();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to update asset'));
+                }
+            } catch (error) {
+                alert('Error updating asset: ' + error.message);
+            }
+        };
+        
+        async function deleteAsset(assetId, assetName) {
+            if (!confirm(`Are you sure you want to delete "${assetName}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/crud/delete_asset?projectName=${encodeURIComponent(currentProject)}&categoryName=${encodeURIComponent(currentCategoryName)}&assetName=${encodeURIComponent(assetName)}&assetId=${assetId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Asset deleted successfully!');
+                    loadAssets();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to delete asset'));
+                }
+            } catch (error) {
+                alert('Error deleting asset: ' + error.message);
+            }
+        }
+        
+        function openMoreFieldsModal(assetId, assetName, categoryId) {
+            document.getElementById('moreFieldsAssetId').value = assetId;
+            document.getElementById('moreFieldsAssetName').value = assetName;
+            document.getElementById('moreFieldsModal').style.display = 'block';
+        }
+        
+        function closeMoreFieldsModal() {
+            document.getElementById('moreFieldsModal').style.display = 'none';
+            document.getElementById('customFieldsContainer').innerHTML = `
+                <div class="more-field-row">
+                    <input type="text" placeholder="Field name (e.g., 'audio')" class="field-key">
+                    <input type="file" class="field-value">
+                    <button type="button" class="btn btn-danger btn-small" onclick="this.parentElement.remove()">Remove</button>
+                </div>
+            `;
+        }
+        
+        function addCustomField() {
+            const container = document.getElementById('customFieldsContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'more-field-row';
+            newRow.innerHTML = `
+                <input type="text" placeholder="Field name" class="field-key">
+                <input type="file" class="field-value">
+                <button type="button" class="btn btn-danger btn-small" onclick="this.parentElement.remove()">Remove</button>
+            `;
+            container.appendChild(newRow);
+        }
+        
+        document.getElementById('moreFieldsForm').onsubmit = async function(e) {
+            e.preventDefault();
+            
+            const assetId = document.getElementById('moreFieldsAssetId').value;
+            const assetName = document.getElementById('moreFieldsAssetName').value;
+            
+            const formData = new FormData();
+            formData.append('projectName', currentProject);
+            formData.append('categoryName', currentCategoryName);
+            formData.append('assetName', assetName);
+            formData.append('assetId', assetId);
+            
+            const fieldRows = document.querySelectorAll('.more-field-row');
+            let index = 0;
+            
+            fieldRows.forEach(row => {
+                const keyInput = row.querySelector('.field-key');
+                const valueInput = row.querySelector('.field-value');
+                
+                if (keyInput.value && valueInput.files.length > 0) {
+                    formData.append(`key${index}`, keyInput.value);
+                    formData.append(`value${index}`, valueInput.files[0]);
+                    index++;
+                }
+            });
+            
+            if (index === 0) {
+                alert('Please add at least one field');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/crud/addMoreFields', {
+                    method: 'PUT',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Custom fields added successfully!');
+                    closeMoreFieldsModal();
+                    loadAssets();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to add fields'));
+                }
+            } catch (error) {
+                alert('Error adding fields: ' + error.message);
+            }
+        };
+        
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Categories Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 2em;
+        }
+        
+        .project-selector {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            min-width: 200px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.3s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9em;
+            margin: 0 5px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .checkbox-group input {
+            width: auto;
+        }
+        
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .category-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            position: relative;
+        }
+        
+        .category-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .category-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        
+        .category-info {
+            padding: 20px;
+        }
+        
+        .category-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .category-badges {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .badge-enabled {
+            background: #28a745;
+            color: white;
+        }
+        
+        .badge-disabled {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .badge-premium {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .badge-free {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .badge-type {
+            background: #667eea;
+            color: white;
+        }
+        
+        .category-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .multi-input-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .multi-input-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .multi-input-row input {
+            flex: 1;
+        }
+        
+        .btn-add {
+            background: #28a745;
+            padding: 8px 16px;
+        }
+        
+        .btn-remove {
+            background: #dc3545;
+            padding: 8px 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/api/crud/ui/projects" class="back-link">← Back to Projects</a>
+        
+        <div class="header">
+            <div class="header-top">
+                <h1>📂 Categories Management</h1>
+                <button class="btn" onclick="openCreateModal()">+ Add Categories</button>
+            </div>
+            <div>
+                <label>Select Project:</label>
+                <select id="projectSelector" class="project-selector" onchange="loadCategories()">
+                    <option value="">-- Select a Project --</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="categoriesContainer" class="categories-grid">
+            <div class="loading">Please select a project</div>
+        </div>
+    </div>
+    
+    <!-- Create Categories Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCreateModal()">&times;</span>
+            <h2>Add Categories</h2>
+            <form id="createForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Asset Type</label>
+                    <select name="assetType">
+                        <option value="">Select Type</option>
+                        <option value="frame">Frame</option>
+                        <option value="sticker">Sticker</option>
+                        <option value="suits">Suits</option>
+                        <option value="gif">GIF</option>
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Add by Category Names</label>
+                    <div id="categoryNamesContainer" class="multi-input-container">
+                        <div class="multi-input-row">
+                            <input type="text" name="categories" placeholder="Category name">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-add btn-small" onclick="addCategoryInput()">+ Add More</button>
+                </div>
+                <div class="form-group">
+                    <label>OR Upload Images (filename will be category name)</label>
+                    <input type="file" name="images" accept="image/*" multiple>
+                </div>
+                <button type="submit" class="btn">Create Categories</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Category Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Category</h2>
+            <form id="editForm" enctype="multipart/form-data">
+                <input type="hidden" name="categoryId" id="editCategoryId">
+                <div class="form-group">
+                    <label>Category Name</label>
+                    <input type="text" name="categoryName" id="editCategoryName">
+                </div>
+                <div class="form-group">
+                    <label>Category Image</label>
+                    <input type="file" name="categoryImage" accept="image/*">
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="isEnable" id="editIsEnable">
+                    <label for="editIsEnable">Enabled</label>
+                </div>
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" name="isPremium" id="editIsPremium">
+                    <label for="editIsPremium">Premium</label>
+                </div>
+                <button type="submit" class="btn">Update Category</button>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        let currentProject = '';
+        let categories = [];
+        
+        window.onload = function() {
+            loadProjects();
+            const urlParams = new URLSearchParams(window.location.search);
+            const projectName = urlParams.get('projectName');
+            if (projectName) {
+                currentProject = projectName;
+            }
+        };
+        
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/crud/get_projects');
+                const data = await response.json();
+                const selector = document.getElementById('projectSelector');
+                
+                selector.innerHTML = '<option value="">-- Select a Project --</option>' +
+                    data.projects.map(p => 
+                        `<option value="${p.name}" ${p.name === currentProject ? 'selected' : ''}>${p.name}</option>`
+                    ).join('');
+                
+                if (currentProject) {
+                    loadCategories();
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+            }
+        }
+        
+        async function loadCategories() {
+            currentProject = document.getElementById('projectSelector').value;
+            
+            if (!currentProject) {
+                document.getElementById('categoriesContainer').innerHTML = 
+                    '<div class="loading">Please select a project</div>';
+                return;
+            }
+            
+            document.getElementById('categoriesContainer').innerHTML = 
+                '<div class="loading">Loading categories...</div>';
+            
+            try {
+                const response = await fetch(`/api/crud/get_categories?projectName=${encodeURIComponent(currentProject)}&isAdmin=true`);
+                const data = await response.json();
+                categories = data.categories || [];
+                displayCategories();
+            } catch (error) {
+                document.getElementById('categoriesContainer').innerHTML = 
+                    '<div class="loading">Error loading categories</div>';
+            }
+        }
+        
+        function displayCategories() {
+            const container = document.getElementById('categoriesContainer');
+            
+            if (categories.length === 0) {
+                container.innerHTML = '<div class="loading">No categories found. Add your first category!</div>';
+                return;
+            }
+            
+            container.innerHTML = categories.map(cat => `
+                <div class="category-card">
+                    <img src="${cat.thumbnail_url || cat.image_url}" 
+                         alt="${cat.name}" 
+                         class="category-image"
+                         onerror="this.src='/static/no_thumbnail.jpg'">
+                    <div class="category-info">
+                        <div class="category-name">${cat.name}</div>
+                        <div class="category-badges">
+                            <span class="badge ${cat.is_enabled ? 'badge-enabled' : 'badge-disabled'}">
+                                ${cat.is_enabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                            <span class="badge ${cat.is_premium ? 'badge-premium' : 'badge-free'}">
+                                ${cat.is_premium ? 'Premium' : 'Free'}
+                            </span>
+                            ${cat.asset_type ? `<span class="badge badge-type">${cat.asset_type}</span>` : ''}
+                        </div>
+                        <div class="category-actions">
+                            <button class="btn btn-small" onclick="viewAssets('${cat._id}', '${cat.name}')">
+                                View Assets
+                            </button>
+                            <button class="btn btn-small btn-secondary" onclick="editCategory('${cat._id}', '${cat.name}', ${cat.is_enabled}, ${cat.is_premium})">
+                                Edit
+                            </button>
+                            <button class="btn btn-small btn-danger" onclick="deleteCategory('${cat._id}', '${cat.name}')">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function addCategoryInput() {
+            const container = document.getElementById('categoryNamesContainer');
+            const newRow = document.createElement('div');
+            newRow.className = 'multi-input-row';
+            newRow.innerHTML = `
+                <input type="text" name="categories" placeholder="Category name">
+                <button type="button" class="btn btn-remove btn-small" onclick="this.parentElement.remove()">Remove</button>
+            `;
+            container.appendChild(newRow);
+        }
+        
+        function openCreateModal() {
+            if (!currentProject) {
+                alert('Please select a project first');
+                return;
+            }
+            document.getElementById('createModal').style.display = 'block';
+        }
+        
+        function closeCreateModal() {
+            document.getElementById('createModal').style.display = 'none';
+            document.getElementById('createForm').reset();
+            document.getElementById('categoryNamesContainer').innerHTML = `
+                <div class="multi-input-row">
+                    <input type="text" name="categories" placeholder="Category name">
+                </div>
+            `;
+        }
+        
+        function openEditModal() {
+            document.getElementById('editModal').style.display = 'block';
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').style.display = 'none';
+            document.getElementById('editForm').reset();
+        }
+        
+        document.getElementById('createForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('projectName', currentProject);
+            
+            try {
+                const response = await fetch('/api/crud/add_categories', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Categories created successfully!');
+                    closeCreateModal();
+                    loadCategories();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to create categories'));
+                }
+            } catch (error) {
+                alert('Error creating categories: ' + error.message);
+            }
+        };
+        
+        function editCategory(categoryId, name, isEnabled, isPremium) {
+            document.getElementById('editCategoryId').value = categoryId;
+            document.getElementById('editCategoryName').value = name;
+            document.getElementById('editIsEnable').checked = isEnabled;
+            document.getElementById('editIsPremium').checked = isPremium;
+            openEditModal();
+        }
+        
+        document.getElementById('editForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('projectName', currentProject);
+            
+            try {
+                const response = await fetch('/api/crud/edit_category', {
+                    method: 'PUT',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Category updated successfully!');
+                    closeEditModal();
+                    loadCategories();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to update category'));
+                }
+            } catch (error) {
+                alert('Error updating category: ' + error.message);
+            }
+        };
+        
+        async function deleteCategory(categoryId, categoryName) {
+            if (!confirm(`Are you sure you want to delete "${categoryName}"? This will delete all assets in this category!`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/crud/delete_category?projectName=${encodeURIComponent(currentProject)}&categoryId=${categoryId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Category deleted successfully!');
+                    loadCategories();
+                } else {
+                    alert('Error: ' + (data.message || data.detail || 'Failed to delete category'));
+                }
+            } catch (error) {
+                alert('Error deleting category: ' + error.message);
+            }
+        }
+        
+        function viewAssets(categoryId, categoryName) {
+            window.location.href = `/api/crud/ui/assets?projectName=${encodeURIComponent(currentProject)}&categoryId=${categoryId}&categoryName=${encodeURIComponent(categoryName)}`;
+        }
+        
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>
